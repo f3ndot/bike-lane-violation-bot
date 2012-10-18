@@ -1,0 +1,14 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    json (1.7.5)
+    oauth (0.4.7)
+    twitter4r (0.7.0)
+      json (>= 1.1.1)
+      oauth (>= 0.4.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  twitter4r
