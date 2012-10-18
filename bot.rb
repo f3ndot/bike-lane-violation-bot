@@ -12,12 +12,14 @@ MYBIKELANE_API_BASE_URL = 'http://www.mybikelane.com/api/'
 
 config = YAML.load_file('config.yml')
 
+
 def write_config_to_file(obj)
   output = File.new 'config.yml', 'w'
   output.puts YAML.dump(obj)
   output.close
 end
 
+# Do a check for OAuth. If not, fire the little wizzard
 if config['oauth']['token'].nil? or config['oauth']['token_secret'].nil?
   require 'oauth'
 
@@ -69,6 +71,7 @@ require 'open-uri'
 # require 'nokogiri'
 require 'xmlsimple'
 
+# Set up the OAuth for this run
 Twitter.configure do |t_config|
   t_config.consumer_key = config['oauth']['consumer_key']
   t_config.consumer_secret = config['oauth']['consumer_secret']
@@ -78,15 +81,30 @@ end
 
 puts "#{APP_HUMAN_NAME} v.#{APP_VERSION} Booted!\n".green
 
+# Update once a day
+if config['twitter_configuration']['last_updated'].nil? or config['twitter_configuration']['last_updated'] < Time.now.to_date.to_s
+  puts "Updating stale Twitter configuration...".yellow
+  
+  t_config = Twitter.configuration
+  config['twitter_configuration']['short_url_length_https'] = t_config['short_url_length_https']
+  config['twitter_configuration']['short_url_length'] = t_config['short_url_length']
+  config['twitter_configuration']['last_updated'] = Time.now.to_date.to_s
 
+  puts "Updated Twitter configuration!".green
+end
+
+# Grab the violation data
 puts "Making MyBikeLane API Call...".yellow
 begin
   # records = XmlSimple.xml_in(Net::HTTP.get_response(URI("#{MYBIKELANE_API_BASE_URL}/posts?city_id=39&format=xml")).body)
   records = XmlSimple.xml_in('test-data.xml')
+  # Sort the retrieved data in increasing order
   records['record'].sort! { |a, b|  a['id'] <=> b['id'] }
   records['record'].each do |record|
-    if config['last_id_tweeted'].nil? or record['id'].first > config['last_id_tweeted'] 
-      puts "Title: #{record['occurred-at']}"
+    # Only allow records that are "later" than the last tweeted records to be, well, tweeted
+    if config['ignore_tweet_id_cache'] == true or config['last_id_tweeted'].nil? or record['id'].first > config['last_id_tweeted'] 
+      # puts "#{record['plate-state'].first.upcase} #{record['plate'].first.upcase} at #{record['location'].first}"
+      puts "#{record['title'].first} (#{record['location'].first}) #BikeTO #{record['url'].first}"
       config['last_id_tweeted'] = record['id'].first
     else
       puts "Ignoring ID: #{record['occurred-at']}"
