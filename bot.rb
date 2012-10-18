@@ -57,6 +57,9 @@ if secrets['oauth']['token'].nil? or secrets['oauth']['token_secret'].nil?
 end
 
 require 'twitter'
+require 'net/http'
+require 'open-uri'
+require 'nokogiri'
 
 puts "#{APP_HUMAN_NAME} v.#{APP_VERSION} Booted!\n".green
 
@@ -66,5 +69,8 @@ Twitter.configure do |config|
   config.oauth_token = secrets['oauth']['token']
   config.oauth_token_secret = secrets['oauth']['token_secret']
 end
+
+
+
 
 # Twitter.update 'Testing Ruby-powered tweet! Holla at @f3ndot'
