@@ -1,3 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'twitter4r', :require => 'twitter'
+gem 'oauth'
+gem 'twitter'
+gem 'json'
+gem 'colorize'
