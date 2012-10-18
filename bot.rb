@@ -25,11 +25,12 @@ def fire_tweet(status)
   begin
     num_attempts += 1
     Twitter.update status
-    puts "#{title_string}#{location_string}#{hashtag_string}#{record['url'].first}".green
+    puts status.to_s.green
   rescue Twitter::Error::TooManyRequests => error
     if num_attempts <= MAX_ATTEMPTS
       # NOTE: Your process could go to sleep for up to 15 minutes but if you
       # retry any sooner, it will almost certainly fail with the same exception.
+      puts "MAX_ATTEMPTS SLEEPING".cyan
       sleep error.rate_limit.reset_in
       retry
     else
@@ -153,6 +154,7 @@ loop do
   else
     puts "Got API response OK!".green
   end
+  puts "SLEEPING FOR AN HOUR".cyan
   sleep(3600)
   puts "------ SLEPT FOR AN HOUR. TWEETING NEW POSTS! ------".cyan
 end
