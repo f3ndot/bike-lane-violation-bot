@@ -10,9 +10,15 @@ APP_VERSION = '0.1.0'
 
 MYBIKELANE_API_BASE_URL = 'http://www.mybikelane.com/api/'
 
-secrets = YAML.load_file('secrets.yml')
+config = YAML.load_file('config.yml')
 
-if secrets['oauth']['token'].nil? or secrets['oauth']['token_secret'].nil?
+def write_config_to_file(obj)
+  output = File.new 'config.yml', 'w'
+  output.puts YAML.dump(obj)
+  output.close
+end
+
+if config['oauth']['token'].nil? or config['oauth']['token_secret'].nil?
   require 'oauth'
 
   puts "
@@ -33,7 +39,7 @@ if secrets['oauth']['token'].nil? or secrets['oauth']['token_secret'].nil?
 
   ".red
 
-  consumer = OAuth::Consumer.new(secrets['oauth']['consumer_key'], secrets['oauth']['consumer_secret'], :site => "http://twitter.com")
+  consumer = OAuth::Consumer.new(config['oauth']['consumer_key'], config['oauth']['consumer_secret'], :site => "http://twitter.com")
    
   request_token = consumer.get_request_token 
   print "AUTHORIZATION URL: ".yellow
@@ -44,17 +50,15 @@ if secrets['oauth']['token'].nil? or secrets['oauth']['token_secret'].nil?
   puts "\nGenerating access credentials...".yellow
 
   access_token = request_token.get_access_token(:oauth_verifier => oauth_verifier )
-  secrets['oauth']['token'] = access_token.token
-  secrets['oauth']['token_secret'] = access_token.secret
+  config['oauth']['token'] = access_token.token
+  config['oauth']['token_secret'] = access_token.secret
   if access_token.token and access_token.secret
     puts "Successfully generated OAuth screts!".green
   end
 
-  puts "Writing OAuth secrets to YAML file...".green
+  puts "Writing OAuth config to YAML file...".green
 
-  output = File.new 'secrets.yml', 'w'
-  output.puts YAML.dump(secrets)
-  output.close
+  write_config_to_file config
   puts "Success! Done! The bot is ready to use! Booting main loop now\n\n".green
 end
 
@@ -65,11 +69,11 @@ require 'open-uri'
 # require 'nokogiri'
 require 'xmlsimple'
 
-Twitter.configure do |config|
-  config.consumer_key = secrets['oauth']['consumer_key']
-  config.consumer_secret = secrets['oauth']['consumer_secret']
-  config.oauth_token = secrets['oauth']['token']
-  config.oauth_token_secret = secrets['oauth']['token_secret']
+Twitter.configure do |t_config|
+  t_config.consumer_key = config['oauth']['consumer_key']
+  t_config.consumer_secret = config['oauth']['consumer_secret']
+  t_config.oauth_token = config['oauth']['token']
+  t_config.oauth_token_secret = config['oauth']['token_secret']
 end
 
 puts "#{APP_HUMAN_NAME} v.#{APP_VERSION} Booted!\n".green
@@ -79,9 +83,16 @@ puts "Making MyBikeLane API Call...".yellow
 begin
   # records = XmlSimple.xml_in(Net::HTTP.get_response(URI("#{MYBIKELANE_API_BASE_URL}/posts?city_id=39&format=xml")).body)
   records = XmlSimple.xml_in('test-data.xml')
+  records['record'].sort! { |a, b|  a['id'] <=> b['id'] }
   records['record'].each do |record|
-    puts "Title: #{record['title']}"
+    if config['last_id_tweeted'].nil? or record['id'].first > config['last_id_tweeted'] 
+      puts "Title: #{record['occurred-at']}"
+      config['last_id_tweeted'] = record['id'].first
+    else
+      puts "Ignoring ID: #{record['occurred-at']}"
+    end
   end
+  write_config_to_file config
 rescue Exception => e
   puts "\033[1mMyBikeLane API call FAILED:\033[22m #{e.message}".red
 else
