@@ -8,6 +8,8 @@ APP_HUMAN_NAME = 'Bike Lane Violations'
 APP_NAME = 'bike-lane-violation-bot'
 APP_VERSION = '0.1.0'
 
+MYBIKELANE_API_BASE_URL = 'http://www.mybikelane.com/api/'
+
 secrets = YAML.load_file('secrets.yml')
 
 if secrets['oauth']['token'].nil? or secrets['oauth']['token_secret'].nil?
@@ -56,12 +58,12 @@ if secrets['oauth']['token'].nil? or secrets['oauth']['token_secret'].nil?
   puts "Success! Done! The bot is ready to use! Booting main loop now\n\n".green
 end
 
+require 'date'
 require 'twitter'
 require 'net/http'
 require 'open-uri'
-require 'nokogiri'
-
-puts "#{APP_HUMAN_NAME} v.#{APP_VERSION} Booted!\n".green
+# require 'nokogiri'
+require 'xmlsimple'
 
 Twitter.configure do |config|
   config.consumer_key = secrets['oauth']['consumer_key']
@@ -70,7 +72,20 @@ Twitter.configure do |config|
   config.oauth_token_secret = secrets['oauth']['token_secret']
 end
 
+puts "#{APP_HUMAN_NAME} v.#{APP_VERSION} Booted!\n".green
 
 
+puts "Making MyBikeLane API Call...".yellow
+begin
+  # records = XmlSimple.xml_in(Net::HTTP.get_response(URI("#{MYBIKELANE_API_BASE_URL}/posts?city_id=39&format=xml")).body)
+  records = XmlSimple.xml_in('test-data.xml')
+  records['record'].each do |record|
+    puts "Title: #{record['title']}"
+  end
+rescue Exception => e
+  puts "\033[1mMyBikeLane API call FAILED:\033[22m #{e.message}".red
+else
+  puts "Got API response OK!".green
+end
 
 # Twitter.update 'Testing Ruby-powered tweet! Holla at @f3ndot'
